@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BON VOYAGE</title>
+    <link rel="stylesheet" href="styles.css">
+    <!-- Firebase SDK (兼容版本) -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>BON VOYAGE</h1>
+            <p class="subtitle">Git Push to a New Repo_Australia</p>
+        </header>
+
+        <div class="controls">
+            <div class="controls-left">
+                <button class="btn btn-primary" onclick="openAddModal()">Add New Card</button>
+            </div>
+            <div class="controls-right">
+                <div class="sync-status" id="syncStatus">Not Connected</div>
+                <button class="btn btn-secondary" onclick="openConfigModal()">⚙️ Settings</button>
+            </div>
+        </div>
+
+        <div class="gallery" id="gallery">
+            <!-- 卡片将在这里动态生成 -->
+        </div>
+    </div>
+
+    <!-- 添加/编辑卡片的模态框 -->
+    <div id="addModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeAddModal()">&times;</span>
+            <h2>Add New Card</h2>
+            <form id="cardForm">
+                <div class="form-group">
+                    <label for="cardTitle">Description:</label>
+                    <textarea id="cardTitle" rows="6" required></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="cardDescription">Signature Name:</label>
+                    <input type="text" id="cardDescription" placeholder="Your name">
+                </div>
+                <div class="form-group">
+                    <label for="cardImage">Image:</label>
+                    <input type="file" id="cardImage" accept="image/*">
+                    <small>Supports JPG, PNG, GIF, etc.</small>
+                </div>
+                <button type="submit" class="btn btn-primary">Save Card</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Firebase 配置模态框 -->
+    <div id="configModal" class="modal">
+        <div class="modal-content config-modal">
+            <span class="close" onclick="closeConfigModal()">&times;</span>
+            <h2>Firebase Settings</h2>
+            <div id="configStatus"></div>
+            <div id="configForm" style="display:none;">
+                <p style="color: #666; margin-bottom: 20px;">Firebase is configured in code, no manual setup needed</p>
+                <button type="button" class="btn btn-secondary" onclick="useLocalStorage()">Switch to Local Storage</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
