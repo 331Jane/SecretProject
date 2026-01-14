@@ -1,17 +1,18 @@
-// Firebase 配置和数据管理
+// Firebase config and data management
 let cards = [];
 let useFirebase = false;
 let db = null;
-const MAX_IMAGE_SIZE = 1024 * 1024; // 1MB 限制
+const MAX_IMAGE_SIZE = 1024 * 1024; // 1MB limit
 
-// Firebase 配置（硬编码）
+// Firebase config (hardcoded)
 const FIREBASE_CONFIG = {
     apiKey: "AIzaSyBTlb3VofnlMFuBJBHfKYC8y---IXxRNt8",
     authDomain: "secretproject-b70ea.firebaseapp.com",
     projectId: "secretproject-b70ea",
     storageBucket: "secretproject-b70ea.firebasestorage.app",
     messagingSenderId: "661631407740",
-    appId: "1:661631407740:web:c007f79ab41232e61a9bf9"
+    appId: "1:661631407740:web:c007f79ab41232e61a9bf9",
+    databaseURL: "https://secretproject-b70ea-default-rtdb.asia-southeast1.firebasedatabase.app"
 };
 
 // 初始化应用
@@ -45,14 +46,14 @@ function initializeFirebase(config) {
         if (!firebase.apps.length) {
             firebase.initializeApp(config);
         }
-        db = firebase.firestore();
+        db = firebase.database();
         useFirebase = true;
         updateSyncStatus('Connecting...', 'default');
         
         console.log('Firebase initialized successfully');
         console.log('Project ID:', config.projectId);
         
-        // Load data from Firebase
+        // Load data from Realtime Database
         loadCardsFromFirebase();
     } catch (error) {
         console.error('Firebase initialization error:', error);
@@ -65,7 +66,7 @@ function initializeFirebase(config) {
         updateSyncStatus('Firebase Failed', 'error');
         
         // Show detailed error
-        alert('Firebase connection failed:\n\n' + error.message + '\n\nPlease ensure:\n1. Firestore Database is created\n2. Network connection is stable\n3. Check browser console for more info');
+        alert('Firebase connection failed:\n\n' + error.message + '\n\nPlease ensure:\n1. Realtime Database is created\n2. Network connection is stable\n3. Check browser console for more info');
     }
 }
 
@@ -79,64 +80,65 @@ function loadCards() {
     }
 }
 
-// Load cards from Firebase
+// Load cards from Realtime Database
 function loadCardsFromFirebase() {
     if (!db) return;
     
-    db.collection('cards').orderBy('timestamp', 'desc').onSnapshot(
-        (snapshot) => {
-            cards = [];
-            snapshot.forEach((doc) => {
-                cards.push({
-                    id: doc.id,
-                    ...doc.data()
+    const cardsRef = db.ref('cards');
+    
+    cardsRef.on('value', (snapshot) => {
+        cards = [];
+        const data = snapshot.val();
+        
+        if (data) {
+            // Convert object to array and sort by timestamp (newest first)
+            Object.keys(data).forEach((key) => {
+                cards.unshift({
+                    id: key,
+                    ...data[key]
                 });
             });
-            renderCards();
-            updateSyncStatus('Connected', 'connected');
-            console.log('Loaded', cards.length, 'cards from Firebase');
-        },
-        (error) => {
-            console.error('Firebase load error:', error);
-            console.error('Error code:', error.code);
-            console.error('Error message:', error.message);
-            
-            updateSyncStatus('Connection Failed', 'error');
-            
-            // If permission error, show detailed message
-            if (error.code === 'permission-denied') {
-                alert('Permission error: Cannot access Firestore.\n\nPlease ensure:\n1. Firestore Database is created (test mode)\n2. Database location is correct\n3. Security rules are properly set');
-            }
-            
-            // Fallback to local storage
-            loadCards();
-            renderCards();
+            cards.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
         }
-    );
+        
+        renderCards();
+        updateSyncStatus('Connected', 'connected');
+        console.log('Loaded', cards.length, 'cards from Firebase');
+    }, (error) => {
+        console.error('Firebase load error:', error);
+        console.error('Error code:', error.code);
+        console.error('Error message:', error.message);
+        
+        updateSyncStatus('Connection Failed', 'error');
+        
+        // Fallback to local storage
+        loadCards();
+        renderCards();
+    });
 }
 
-// 保存卡片到 localStorage
+// Save cards to localStorage
 function saveCards() {
     localStorage.setItem('cards', JSON.stringify(cards));
 }
 
-// 保存卡片到 Firebase
+// Save card to Realtime Database
 function saveCardsToFirebase(cardData) {
-    if (!db) return Promise.reject('Firebase 未初始化');
+    if (!db) return Promise.reject('Firebase not initialized');
     
-    return db.collection('cards').add({
+    return db.ref('cards').push({
         title: cardData.title,
         description: cardData.description,
         image: cardData.image,
-        timestamp: new Date()
+        timestamp: firebase.database.ServerValue.TIMESTAMP
     });
 }
 
-// 从 Firebase 删除卡片
+// Delete card from Realtime Database
 function deleteCardFromFirebase(cardId) {
-    if (!db) return Promise.reject('Firebase 未初始化');
+    if (!db) return Promise.reject('Firebase not initialized');
     
-    return db.collection('cards').doc(cardId).delete();
+    return db.ref('cards/' + cardId).remove();
 }
 
 // 设置表单提交监听
