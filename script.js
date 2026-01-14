@@ -12,7 +12,7 @@ const FIREBASE_CONFIG = {
     storageBucket: "secretproject-b70ea.firebasestorage.app",
     messagingSenderId: "661631407740",
     appId: "1:661631407740:web:c007f79ab41232e61a9bf9",
-    databaseURL: "https://secretproject-b70ea-default-rtdb.asia-southeast1.firebasedatabase.app"
+    databaseURL: "https://secretproject-b70ea-default-rtdb.firebaseio.com"
 };
 
 // 初始化应用
@@ -373,3 +373,4 @@ function updateSyncStatus(message, status = 'default') {
     element.textContent = message;
     element.className = 'sync-status ' + status;
 }
+
