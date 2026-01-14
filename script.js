@@ -2,6 +2,7 @@
 let cards = [];
 let useFirebase = false;
 let db = null;
+let editingCardId = null; // Track which card is being edited
 const MAX_IMAGE_SIZE = 1024 * 1024; // 1MB limit
 
 // Firebase config (hardcoded)
@@ -141,6 +142,17 @@ function deleteCardFromFirebase(cardId) {
     return db.ref('cards/' + cardId).remove();
 }
 
+// Update card in Realtime Database
+function updateCardInFirebase(cardId, cardData) {
+    if (!db) return Promise.reject('Firebase not initialized');
+    
+    return db.ref('cards/' + cardId).update({
+        title: cardData.title,
+        description: cardData.description,
+        image: cardData.image
+    });
+}
+
 // 设置表单提交监听
 function setupFormListener() {
     const form = document.getElementById('cardForm');
@@ -249,6 +261,7 @@ function createCardElement(card) {
                 <span class="signature-label">— ${escapeHtml(card.description)}</span>
             </div>
             <div class="card-actions">
+                <button class="btn btn-secondary" onclick="openEditModal('${cardId}')">✏️ Edit</button>
                 <button class="btn btn-danger" onclick="deleteCard('${cardId}')">Delete</button>
             </div>
         </div>
@@ -310,6 +323,95 @@ function closeConfigModal() {
     document.body.style.overflow = 'auto';
 }
 
+// 打开编辑模态框
+function openEditModal(cardId) {
+    const card = cards.find(c => c.id === cardId);
+    if (!card) return;
+    
+    editingCardId = cardId;
+    document.getElementById('editTitle').value = card.title;
+    document.getElementById('editDescription').value = card.description;
+    document.getElementById('editImagePreview').src = card.image || '';
+    document.getElementById('editImagePreview').style.display = card.image ? 'block' : 'none';
+    
+    document.getElementById('editModal').style.display = 'block';
+    document.body.style.overflow = 'hidden';
+}
+
+// 关闭编辑模态框
+function closeEditModal() {
+    editingCardId = null;
+    document.getElementById('editModal').style.display = 'none';
+    document.body.style.overflow = 'auto';
+}
+
+// Handle edit card save
+function handleEditCard(e) {
+    e.preventDefault();
+    
+    if (!editingCardId) return;
+    
+    const title = document.getElementById('editTitle').value;
+    const description = document.getElementById('editDescription').value;
+    const imageInput = document.getElementById('editImage');
+    const currentCard = cards.find(c => c.id === editingCardId);
+    
+    const updatedCard = {
+        title: title,
+        description: description,
+        image: currentCard.image
+    };
+    
+    // If there's a new image, convert to Base64
+    if (imageInput.files.length > 0) {
+        const file = imageInput.files[0];
+        
+        if (file.size > MAX_IMAGE_SIZE) {
+            alert('Image size cannot exceed 1MB, please compress and retry');
+            return;
+        }
+        
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            updatedCard.image = e.target.result;
+            saveEditCard(updatedCard);
+        };
+        reader.onerror = function() {
+            alert('Image read failed');
+        };
+        reader.readAsDataURL(file);
+    } else {
+        saveEditCard(updatedCard);
+    }
+}
+
+// Save edited card
+function saveEditCard(cardData) {
+    if (useFirebase && db) {
+        updateCardInFirebase(editingCardId, cardData)
+            .then(() => {
+                closeEditModal();
+                document.getElementById('editForm').reset();
+            })
+            .catch(error => {
+                console.error('Update failed:', error);
+                alert('Update failed: ' + error.message);
+            });
+    } else {
+        const cardIndex = cards.findIndex(c => c.id === editingCardId);
+        if (cardIndex >= 0) {
+            cards[cardIndex] = {
+                id: editingCardId,
+                ...cardData
+            };
+            saveCards();
+            renderCards();
+            closeEditModal();
+            document.getElementById('editForm').reset();
+        }
+    }
+}
+
 // Reset form
 function resetForm() {
     document.getElementById('cardForm').reset();
@@ -331,12 +433,16 @@ function escapeHtml(text) {
 window.addEventListener('click', function(event) {
     const addModal = document.getElementById('addModal');
     const configModal = document.getElementById('configModal');
+    const editModal = document.getElementById('editModal');
     
     if (event.target === addModal) {
         closeAddModal();
     }
     if (event.target === configModal) {
         closeConfigModal();
+    }
+    if (event.target === editModal) {
+        closeEditModal();
     }
 });
 
@@ -345,6 +451,7 @@ document.addEventListener('keydown', function(event) {
     if (event.key === 'Escape') {
         closeAddModal();
         closeConfigModal();
+        closeEditModal();
     }
 });
 
@@ -373,4 +480,3 @@ function updateSyncStatus(message, status = 'default') {
     element.textContent = message;
     element.className = 'sync-status ' + status;
 }
-
