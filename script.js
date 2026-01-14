@@ -244,12 +244,10 @@ function createCardElement(card) {
     const cardDiv = document.createElement('div');
     cardDiv.className = 'card';
 
-    // 图片部分
+    // 图片部分 - 只有有图片才显示
     let imageHTML = '';
     if (card.image) {
         imageHTML = `<img src="${card.image}" alt="Card image" class="card-image">`;
-    } else {
-        imageHTML = `<div class="card-image">📷</div>`;
     }
 
     const cardId = card.id;
@@ -262,7 +260,7 @@ function createCardElement(card) {
             </div>
             <div class="card-actions">
                 <button class="btn btn-secondary" onclick="openEditModal('${cardId}')">✏️ Edit</button>
-                <button class="btn btn-danger" onclick="deleteCard('${cardId}')">Delete</button>
+                <button class="btn btn-danger" id="delete-btn-${cardId}" onclick="confirmDeleteCard('${cardId}')">Delete</button>
             </div>
         </div>
     `;
@@ -270,20 +268,40 @@ function createCardElement(card) {
     return cardDiv;
 }
 
+// 确认删除卡片
+function confirmDeleteCard(cardId) {
+    const button = document.getElementById('delete-btn-' + cardId);
+    
+    if (button.textContent === 'Confirm Delete') {
+        deleteCard(cardId);
+        return;
+    }
+    
+    // 第一次点击，改变按钮状态
+    button.textContent = 'Confirm Delete';
+    button.style.backgroundColor = '#d32f2f';
+    
+    // 3秒后恢复按钮状态
+    setTimeout(() => {
+        if (button && document.body.contains(button)) {
+            button.textContent = 'Delete';
+            button.style.backgroundColor = '';
+        }
+    }, 3000);
+}
+
 // 删除卡片
 function deleteCard(cardId) {
-    if (confirm('Are you sure you want to delete this card?')) {
-        if (useFirebase && db) {
-            deleteCardFromFirebase(cardId)
-                .catch(error => {
-                    console.error('Delete failed:', error);
-                    alert('Delete failed: ' + error.message);
-                });
-        } else {
-            cards = cards.filter(card => card.id !== cardId);
-            saveCards();
-            renderCards();
-        }
+    if (useFirebase && db) {
+        deleteCardFromFirebase(cardId)
+            .catch(error => {
+                console.error('Delete failed:', error);
+                alert('Delete failed: ' + error.message);
+            });
+    } else {
+        cards = cards.filter(card => card.id !== cardId);
+        saveCards();
+        renderCards();
     }
 }
 
